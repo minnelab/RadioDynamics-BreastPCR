@@ -1,3 +1,4 @@
+-r ./pre_install.txt
 sphinx-argparse==0.4.0
 sphinx-autodoc-typehints==1.24.0
 sphinx-copybutton==0.5.2
