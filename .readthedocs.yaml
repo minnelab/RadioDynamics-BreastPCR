@@ -14,6 +14,9 @@ build:
     # nodejs: "19"
     # rust: "1.64"
     # golang: "1.19"
+  jobs:
+    pre_install:
+      - pip install numpy==1.23.5
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
@@ -29,6 +32,4 @@ sphinx:
 # See https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html
 python:
     install:
-    - pip:
-      - numpy==1.23.5
     - requirements: docs/requirements.txt
