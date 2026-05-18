@@ -10,20 +10,27 @@ import logging
 from Hive_ML.data_loader.image_loader import get_3D_image_sequence_list_from_4D_image, get_id_label
 from logging import INFO
 
+
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
-            return obj.tolist() # Converts 0-d arrays to floats and n-d arrays to lists
+            return obj.tolist()  # Converts 0-d arrays to floats and n-d arrays to lists
         if isinstance(obj, np.integer):
             return int(obj)
         if isinstance(obj, np.floating):
             return float(obj)
         return super(NumpyEncoder, self).default(obj)
 
-def extract_features_for_image_and_mask(extractor, image_filename: Union[str, PathLike, List[str]],
-                                        mask_filename: Union[str, PathLike], config_dict: Dict[str, Any],
-                                        distance_map_filename: Union[str, PathLike] = None, n_bins: int = 3, logger: logging.Logger = None) -> List[
-    Dict[str, Any]]:
+
+def extract_features_for_image_and_mask(
+    extractor,
+    image_filename: Union[str, PathLike, List[str]],
+    mask_filename: Union[str, PathLike],
+    config_dict: Dict[str, Any],
+    distance_map_filename: Union[str, PathLike] = None,
+    n_bins: int = 3,
+    logger: logging.Logger = None,
+) -> List[Dict[str, Any]]:
     """
     Extract Radiomics for a given image (or list of images), and the corresponding binary mask.
     If a distance map is specified, extract radiomics at each depth interval, specified by ``n_bins``.
@@ -52,7 +59,9 @@ def extract_features_for_image_and_mask(extractor, image_filename: Union[str, Pa
     -------
     List of extracted features, one element in the list per each 3D volume.
     """
-    logger.log(INFO, f"Extracting features for {image_filename} and {mask_filename} with distance map {distance_map_filename}")
+    logger.log(
+        INFO, f"Extracting features for {image_filename} and {mask_filename} with distance map {distance_map_filename}"
+    )
     if type(image_filename) is list:
         img = sitk.ReadImage(image_filename[0])
         subject_path = Path(image_filename[0]).parent
@@ -70,7 +79,7 @@ def extract_features_for_image_and_mask(extractor, image_filename: Union[str, Pa
                 img = None
             sitk_3D_image_sequence_list.append(img)
     else:
-        if img.GetMetaData('dim[0]') == '3':
+        if img.GetMetaData("dim[0]") == "3":
             sitk_3D_image_sequence_list.append(img)
         else:
             sitk_3D_image_sequence_list = get_3D_image_sequence_list_from_4D_image(image_filename)
@@ -93,11 +102,11 @@ def extract_features_for_image_and_mask(extractor, image_filename: Union[str, Pa
         subject_ID, label = get_id_label(image_filename[0], config_dict)
     else:
         subject_ID, label = get_id_label(image_filename, config_dict)
-    
+
     label_id = config_dict["label_dict"][str(label)]
     if Path(subject_path).joinpath(f"{subject_ID}_{label_id}_feature_sequence.json").is_file():
         with open(subject_path.joinpath(f"{subject_ID}_{label_id}_feature_sequence.json"), "r") as f:
-           features_sequence_list = json.load(f)[0]
+            features_sequence_list = json.load(f)[0]
         return features_sequence_list
     logger.log(INFO, f"Extracting features for {len(sitk_3D_image_sequence_list)} volumes")
     if distance_map_filename is None:
@@ -107,12 +116,18 @@ def extract_features_for_image_and_mask(extractor, image_filename: Union[str, Pa
             else:
                 if itk_3D_image.GetSize() != sitk_mask.GetSize():
                     continue
-                if Path(subject_path.joinpath(f"{subject_ID}_{label_id}_feature_sequence_{sequence_number}.json")).is_file():
-                    with open(subject_path.joinpath(f"{subject_ID}_{label_id}_feature_sequence_{sequence_number}.json"), "r") as f:
+                if Path(
+                    subject_path.joinpath(f"{subject_ID}_{label_id}_feature_sequence_{sequence_number}.json")
+                ).is_file():
+                    with open(
+                        subject_path.joinpath(f"{subject_ID}_{label_id}_feature_sequence_{sequence_number}.json"), "r"
+                    ) as f:
                         features_map = json.load(f)
                         features_sequence_list.append(features_map)
                     continue
-                logger.log(INFO, f"Extracting features for Volume {sequence_number} of {len(sitk_3D_image_sequence_list)}")
+                logger.log(
+                    INFO, f"Extracting features for Volume {sequence_number} of {len(sitk_3D_image_sequence_list)}"
+                )
                 logger.log(INFO, f"Image size: {itk_3D_image.GetSize()}")
                 logger.log(INFO, f"Mask size: {sitk_mask_thresholded.GetSize()}")
                 itk_3D_image[itk_3D_image > 345000] = 345000
@@ -121,7 +136,9 @@ def extract_features_for_image_and_mask(extractor, image_filename: Union[str, Pa
                 for key, val in six.iteritems(features):
                     if key.startswith(tuple(image_types)):
                         features_map[key] = features[key]
-                with open(subject_path.joinpath(f"{subject_ID}_{label_id}_feature_sequence_{sequence_number}.json"), "w") as f:
+                with open(
+                    subject_path.joinpath(f"{subject_ID}_{label_id}_feature_sequence_{sequence_number}.json"), "w"
+                ) as f:
                     json.dump(features_map, f, cls=NumpyEncoder)
             features_sequence_list.append(features_map)
     else:
@@ -136,8 +153,8 @@ def extract_features_for_image_and_mask(extractor, image_filename: Union[str, Pa
                     depth_interval = [depth_range, depth_range + max_depth / n_bins]
                     mask = sitk.GetArrayFromImage(sitk_mask_thresholded)
                     where = np.where(
-                        (distance_map >= depth_interval[0]) & (distance_map <= depth_interval[1]) & (mask != 0), mask,
-                        0)
+                        (distance_map >= depth_interval[0]) & (distance_map <= depth_interval[1]) & (mask != 0), mask, 0
+                    )
                     if np.sum(where) == 0:
                         ...
 
@@ -146,21 +163,32 @@ def extract_features_for_image_and_mask(extractor, image_filename: Union[str, Pa
                         mask_image.CopyInformation(itk_3D_image)
                         if itk_3D_image.GetSize() != sitk_mask.GetSize():
                             continue
-                        logger.log(INFO, f"Extracted features for Volume {sequence_number} of {len(sitk_3D_image_sequence_list)} at depth {depth_interval[0]}-{depth_interval[1]}")
+                        logger.log(
+                            INFO,
+                            f"Extracted features for Volume {sequence_number} of {len(sitk_3D_image_sequence_list)} at depth {depth_interval[0]}-{depth_interval[1]}",
+                        )
                         features = extractor.execute(itk_3D_image, mask_image)
                         for key, val in six.iteritems(features):
                             if key.startswith(tuple(image_types)):
-                                features_map[key + "_{}-{}".format(round(depth_interval[0] * 100 / max_depth, 1),
-                                                                   round(depth_interval[1] * 100 / max_depth, 1))] = \
-                                    features[key]
+                                features_map[
+                                    key
+                                    + "_{}-{}".format(
+                                        round(depth_interval[0] * 100 / max_depth, 1),
+                                        round(depth_interval[1] * 100 / max_depth, 1),
+                                    )
+                                ] = features[key]
             features_sequence_list.append(features_map)
     return features_sequence_list
 
 
-def extract_perfusion_feature(perfusion_feature_id: str, perfusion_map_filename: Union[str, PathLike, List[str]],
-                              distance_map_filename: Union[str, PathLike, List[str]], subject: str,
-                              config_dict: Dict[str, Any],
-                              n_bins_list: List[int] = [2]) -> Dict[str, Any]:
+def extract_perfusion_feature(
+    perfusion_feature_id: str,
+    perfusion_map_filename: Union[str, PathLike, List[str]],
+    distance_map_filename: Union[str, PathLike, List[str]],
+    subject: str,
+    config_dict: Dict[str, Any],
+    n_bins_list: List[int] = [2],
+) -> Dict[str, Any]:
     """
     Function to extract statistical features (mean, sd, median, max and min) for a given 3D perfusion map at different depth intervals.
 
@@ -199,8 +227,10 @@ def extract_perfusion_feature(perfusion_feature_id: str, perfusion_map_filename:
         for depth_range in np.arange(0, max_depth, max_depth / n_bins):
             depth_interval = [depth_range, depth_range + max_depth / n_bins]
             where = np.where(
-                (distance_map >= depth_interval[0]) & (distance_map <= depth_interval[1]) & (feature_map != 0), True,
-                False)
+                (distance_map >= depth_interval[0]) & (distance_map <= depth_interval[1]) & (feature_map != 0),
+                True,
+                False,
+            )
             if feature_map[where].shape[0] == 0:
                 section_mean = None
                 section_min = None
@@ -215,19 +245,39 @@ def extract_perfusion_feature(perfusion_feature_id: str, perfusion_map_filename:
                 section_median = np.median(feature_map[where])
 
             feature_depth[
-                "avg_{}_{}-{}_depth".format(perfusion_feature_id, round(depth_interval[0] * 100 / max_depth, 1),
-                                            round(depth_interval[1] * 100 / max_depth), 1)] = section_mean
+                "avg_{}_{}-{}_depth".format(
+                    perfusion_feature_id,
+                    round(depth_interval[0] * 100 / max_depth, 1),
+                    round(depth_interval[1] * 100 / max_depth),
+                )
+            ] = section_mean
             feature_depth[
-                "median_{}_{}-{}_depth".format(perfusion_feature_id, round(depth_interval[0] * 100 / max_depth, 1),
-                                               round(depth_interval[1] * 100 / max_depth), 1)] = section_median
+                "median_{}_{}-{}_depth".format(
+                    perfusion_feature_id,
+                    round(depth_interval[0] * 100 / max_depth, 1),
+                    round(depth_interval[1] * 100 / max_depth),
+                )
+            ] = section_median
             feature_depth[
-                "sd_{}_{}-{}_depth".format(perfusion_feature_id, round(depth_interval[0] * 100 / max_depth, 1),
-                                           round(depth_interval[1] * 100 / max_depth), 1)] = section_std
+                "sd_{}_{}-{}_depth".format(
+                    perfusion_feature_id,
+                    round(depth_interval[0] * 100 / max_depth, 1),
+                    round(depth_interval[1] * 100 / max_depth),
+                )
+            ] = section_std
             feature_depth[
-                "min_{}_{}-{}_depth".format(perfusion_feature_id, round(depth_interval[0] * 100 / max_depth, 1),
-                                            round(depth_interval[1] * 100 / max_depth), 1)] = section_min
+                "min_{}_{}-{}_depth".format(
+                    perfusion_feature_id,
+                    round(depth_interval[0] * 100 / max_depth, 1),
+                    round(depth_interval[1] * 100 / max_depth),
+                )
+            ] = section_min
             feature_depth[
-                "max_{}_{}-{}_depth".format(perfusion_feature_id, round(depth_interval[0] * 100 / max_depth, 1),
-                                            round(depth_interval[1] * 100 / max_depth), 1)] = section_max
+                "max_{}_{}-{}_depth".format(
+                    perfusion_feature_id,
+                    round(depth_interval[0] * 100 / max_depth, 1),
+                    round(depth_interval[1] * 100 / max_depth),
+                )
+            ] = section_max
 
     return feature_depth

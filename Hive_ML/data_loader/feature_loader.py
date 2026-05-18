@@ -8,9 +8,12 @@ import pandas as pd
 from Hive_ML.utilities.feature_utils import get_feature_set_details, get_4D_feature_stats, flatten_4D_features
 
 
-def load_feature_set(feature_set_filename: Union[str, PathLike], get_4D_stats: bool = True,
-                     flatten_features: bool = False, select_T: int = None) -> Tuple[
-    numpy.ndarray, List[str], List[str], List[str], numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+def load_feature_set(
+    feature_set_filename: Union[str, PathLike],
+    get_4D_stats: bool = True,
+    flatten_features: bool = False,
+    select_T: int = None,
+) -> Tuple[numpy.ndarray, List[str], List[str], List[str], numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     """
     Function to load a feature set from a filepath, including the Subject list, their corresponding labels and a list of feature names.
     If ``get_4D_stats`` is set to **True**, the 4D statistics of the feature set are returned (see :func:`utilities.feature_utils.get_4D_feature_stats` )
@@ -42,7 +45,7 @@ def load_feature_set(feature_set_filename: Union[str, PathLike], get_4D_stats: b
     else:
         raise ValueError("Output file format not recognized, expected one of: '.xslx', '.csv', '.pkl' ")
 
-    feature_set = feature_set.sort_values(by=['Subject_Label', 'Subject_ID', 'Sequence_Number'])
+    feature_set = feature_set.sort_values(by=["Subject_Label", "Subject_ID", "Sequence_Number"])
     feature_list, subject_ids, subject_labels, feature_names = get_feature_set_details(feature_set)
 
     if get_4D_stats:
@@ -55,5 +58,13 @@ def load_feature_set(feature_set_filename: Union[str, PathLike], get_4D_stats: b
     if select_T is not None:
         feature_list = np.array(feature_list).squeeze(axis=-2)[int(select_T), :, :]
 
-    return np.array(
-        feature_list), subject_ids, subject_labels, feature_names, mean_features, sum_features, std_features, mean_delta_features
+    return (
+        np.array(feature_list),
+        subject_ids,
+        subject_labels,
+        feature_names,
+        mean_features,
+        sum_features,
+        std_features,
+        mean_delta_features,
+    )

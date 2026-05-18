@@ -10,7 +10,6 @@ from Hive.utils.log_utils import (
     get_logger,
     add_verbosity_options_to_argparser,
     log_lvl_from_verbosity_args,
-
 )
 from argparse import ArgumentParser, RawTextHelpFormatter
 from joblib import parallel_backend
@@ -21,9 +20,24 @@ from textwrap import dedent
 from tqdm import tqdm
 import Hive_ML.configs
 from Hive_ML.data_loader.feature_loader import load_feature_set
-from Hive_ML.training.models import adab_tree, random_forest, knn, decicion_tree, lda, qda, naive, svm_kernel, \
-    logistic_regression, ridge, mlp
+from Hive_ML.training.models import (
+    adab_tree,
+    random_forest,
+    knn,
+    decicion_tree,
+    lda,
+    qda,
+    naive,
+    svm_kernel,
+    logistic_regression,
+    ridge,
+    mlp,
+)
 from Hive_ML.utilities.feature_utils import data_shuffling, feature_normalization
+
+import warnings
+
+warnings.filterwarnings("ignore")
 
 TIMESTAMP = "{:%Y-%m-%d_%H-%M-%S}".format(datetime.datetime.now())
 
@@ -38,27 +52,18 @@ MODELS = {
     "decision_tree": decicion_tree,
     "svm": svm_kernel,
     "ridge": ridge,
-    "mlp": mlp
+    "mlp": mlp,
 }
 
-DESC = dedent(
-    """
+DESC = dedent("""
     Script to run Sequential 5-CV Forward Feature Selection on a Feature Set. The SFFS summary (in JSON format) is saved
     in the experiment folder, defined by the ``experiment_name`` argument.
-    """  # noqa: E501
-)
-EPILOG = dedent(
-    """
+    """)  # noqa: E501
+EPILOG = dedent("""
     Example call:
     ::
         {filename} -feature-file /path/to/feature_table.csv --config-file config_file.json --experiment-name Radiomics
-    """.format(  # noqa: E501
-        filename=Path(__file__).name
-    )
-)
-import warnings
-
-warnings.filterwarnings("ignore")
+    """.format(filename=Path(__file__).name))  # noqa: E501
 
 
 def get_arg_parser():
@@ -84,7 +89,7 @@ def get_arg_parser():
         required=True,
         help="Experiment name used to save the SFFS summary.",
     )
-    
+
     pars.add_argument(
         "--split-file",
         type=str,
@@ -132,13 +137,19 @@ def main():
             stats_4D = False
             flatten_features = False
 
-    feature_set, subject_ids, subject_labels, feature_names, mean_features, sum_features, std_features, mean_delta_features = load_feature_set(
-        arguments["feature_file"],
-        get_4D_stats=stats_4D,
-        flatten_features=flatten_features)
-    
+    (
+        feature_set,
+        subject_ids,
+        subject_labels,
+        feature_names,
+        mean_features,
+        sum_features,
+        std_features,
+        mean_delta_features,
+    ) = load_feature_set(arguments["feature_file"], get_4D_stats=stats_4D, flatten_features=flatten_features)
+
     split_file = arguments["split_file"] if arguments["split_file"] else None
-    
+
     if aggregation == "Flat":
         features = feature_set
     elif aggregation == "Mean":
@@ -161,8 +172,11 @@ def main():
 
         if not Path(split_file).is_file():
             train_feature_set, train_label_set, test_feature_set, test_label_set = data_shuffling(
-                np.swapaxes(feature_set_3D, 0, 1), label_set, config_dict["random_seed"],
-                test_size=config_dict["test_size"])
+                np.swapaxes(feature_set_3D, 0, 1),
+                label_set,
+                config_dict["random_seed"],
+                test_size=config_dict["test_size"],
+            )
 
     else:
 
@@ -192,22 +206,20 @@ def main():
         print("# Labels: {}".format(label_set.shape))
 
         if not Path(split_file).is_file():
-            train_feature_set, train_label_set, test_feature_set, test_label_set = data_shuffling(feature_set, label_set,
-                                                                                                config_dict[
-                                                                                                    "random_seed"],
-                                                                                                test_size=config_dict[
-                                                                                                    "test_size"])
+            train_feature_set, train_label_set, test_feature_set, test_label_set = data_shuffling(
+                feature_set, label_set, config_dict["random_seed"], test_size=config_dict["test_size"]
+            )
     if Path(split_file).is_file():
         logger.info(f"Using split file: {split_file}")
         split_data = pd.read_csv(split_file)
         train_ids = split_data["train_split"].tolist()
         test_ids = split_data["test_split"].tolist()
-    
+
         train_feature_set = []
         test_feature_set = []
         train_label_set = []
         test_label_set = []
-        
+
         for feature, label, subject_id in zip(feature_set, subject_labels, subject_ids):
             if subject_id in train_ids:
                 train_feature_set.append(feature)
@@ -224,9 +236,8 @@ def main():
     experiment_name = arguments["experiment_name"]
 
     experiment_dir = Path(os.environ["ROOT_FOLDER"]).joinpath(
-        experiment_name, config_dict["feature_selection"],
-        aggregation,
-        "FS")
+        experiment_name, config_dict["feature_selection"], aggregation, "FS"
+    )
     experiment_dir.mkdir(parents=True, exist_ok=True)
 
     n_iterations = 0
@@ -238,7 +249,7 @@ def main():
 
     pbar = tqdm(total=n_iterations)
 
-    with parallel_backend('loky', n_jobs=-1):
+    with parallel_backend("loky", n_jobs=-1):
         for classifier in models:
             if classifier in ["rf", "adab"]:
                 pbar.update(1)
@@ -257,27 +268,29 @@ def main():
                 else:
                     x_train = train_feature_set
                     y_train = train_label_set
-                    #x_train, y_train, _, _ = prepare_features(train_feature_set, train_label_set, train_index,
+                    # x_train, y_train, _, _ = prepare_features(train_feature_set, train_label_set, train_index,
                     #                                          aggregation)
 
                     n_features = config_dict["n_features"]
                     if n_features > x_train.shape[1]:
                         n_features = x_train.shape[1]
-                        
+
                     if classifier == "knn":
                         n_features = 10
 
                     x_train, _, _ = feature_normalization(x_train)
 
                     clf = MODELS[classifier](**models[classifier], random_state=config_dict["random_seed"])
-                    sffs_model = SFS(clf,
-                                     k_features=n_features,
-                                     forward=True,
-                                     floating=True,
-                                     scoring='roc_auc',
-                                     verbose=2,
-                                     n_jobs=-1,
-                                     cv=5)
+                    sffs_model = SFS(
+                        clf,
+                        k_features=n_features,
+                        forward=True,
+                        floating=True,
+                        scoring="roc_auc",
+                        verbose=2,
+                        n_jobs=-1,
+                        cv=5,
+                    )
                     df_features_x = []
                     for x_train_row in x_train:
                         df_row = {}
@@ -290,7 +303,7 @@ def main():
 
                     sffs_features = sffs.subsets_
                     for key in sffs_features:
-                        sffs_features[key]['cv_scores'] = sffs_features[key]['cv_scores'].tolist()
+                        sffs_features[key]["cv_scores"] = sffs_features[key]["cv_scores"].tolist()
 
                     selected_features[classifier][fold] = sffs_features
                     with open(fs_summary, "w") as f:

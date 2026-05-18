@@ -28,8 +28,12 @@ def logistic_regression(random_state: int = None) -> LogisticRegression:
     return clf
 
 
-def mlp(hidden_layer_sizes: Sequence[int] = (10, 10, 10), solver: str = 'adam',
-        activation: str = 'relu', random_state: int = None) -> MLPClassifier:
+def mlp(
+    hidden_layer_sizes: Sequence[int] = (10, 10, 10),
+    solver: str = "adam",
+    activation: str = "relu",
+    random_state: int = None,
+) -> MLPClassifier:
     """
     Function to create and return a ``Multy-Layer Perceptron`` classifier.
 
@@ -47,13 +51,15 @@ def mlp(hidden_layer_sizes: Sequence[int] = (10, 10, 10), solver: str = 'adam',
     -------
         MLP classifier.
     """
-    clf = MLPClassifier(hidden_layer_sizes=hidden_layer_sizes, solver=solver, activation=activation,
-                        random_state=random_state)
+    clf = MLPClassifier(
+        hidden_layer_sizes=hidden_layer_sizes, solver=solver, activation=activation, random_state=random_state
+    )
     return clf
 
 
-def decicion_tree(criterion: str = 'gini', max_depth: int = 10,
-                  class_weight: Union[Dict, List] = None, random_state: int = None) -> DecisionTreeClassifier:
+def decicion_tree(
+    criterion: str = "gini", max_depth: int = 10, class_weight: Union[Dict, List] = None, random_state: int = None
+) -> DecisionTreeClassifier:
     """
     Function to create and return a ``Decision Tree`` classifier.
 
@@ -71,19 +77,23 @@ def decicion_tree(criterion: str = 'gini', max_depth: int = 10,
     Returns
     -------
         Decision Tree classifier.
-        """
+    """
 
-    clf = DecisionTreeClassifier(criterion=criterion,
-                                 max_depth=max_depth,
-                                 class_weight=class_weight,
-                                 random_state=random_state)
+    clf = DecisionTreeClassifier(
+        criterion=criterion, max_depth=max_depth, class_weight=class_weight, random_state=random_state
+    )
 
     return clf
 
 
-def random_forest(n_estimators: int = 100, criterion: str = 'gini', max_depth: int = 10,
-                  class_weight: Union[Dict, List] = None,
-                  max_samples: Union[int, float] = None, random_state: int = None) -> RandomForestClassifier:
+def random_forest(
+    n_estimators: int = 100,
+    criterion: str = "gini",
+    max_depth: int = 10,
+    class_weight: Union[Dict, List] = None,
+    max_samples: Union[int, float] = None,
+    random_state: int = None,
+) -> RandomForestClassifier:
     """
     Function  to create and return a ``Random Forest`` classifier.
 
@@ -107,18 +117,25 @@ def random_forest(n_estimators: int = 100, criterion: str = 'gini', max_depth: i
         Random Forest classifier.
     """
 
-    clf = RandomForestClassifier(criterion=criterion,
-                                 n_estimators=n_estimators,
-                                 max_depth=max_depth,
-                                 class_weight=class_weight,
-                                 max_samples=max_samples,
-                                 n_jobs=-1,
-                                 random_state=random_state)
+    clf = RandomForestClassifier(
+        criterion=criterion,
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        class_weight=class_weight,
+        max_samples=max_samples,
+        n_jobs=-1,
+        random_state=random_state,
+    )
     return clf
 
 
-def svm_kernel(kernel: str = 'linear', poly_degree: int = 3, c_val: int = 1,
-               class_weight: Union[Dict, List] = None, random_state: int = None) -> svm.SVC:
+def svm_kernel(
+    kernel: str = "linear",
+    poly_degree: int = 3,
+    c_val: int = 1,
+    class_weight: Union[Dict, List] = None,
+    random_state: int = None,
+) -> svm.SVC:
     """
     Function  to create and return a ``Support Vector Machine`` classifier.
 
@@ -139,12 +156,17 @@ def svm_kernel(kernel: str = 'linear', poly_degree: int = 3, c_val: int = 1,
         SVM Classifier.
     """
 
-    clf = svm.SVC(kernel=kernel, degree=poly_degree,
-                  gamma='scale', C=c_val, tol=1e-1,
-                  class_weight=class_weight,
-                  probability=True,
-                  random_state=random_state,
-                  max_iter=-1)
+    clf = svm.SVC(
+        kernel=kernel,
+        degree=poly_degree,
+        gamma="scale",
+        C=c_val,
+        tol=1e-1,
+        class_weight=class_weight,
+        probability=True,
+        random_state=random_state,
+        max_iter=-1,
+    )
 
     return clf
 
@@ -163,15 +185,18 @@ def knn(neighbors=5, random_state: int = None) -> KNeighborsClassifier:
     -------
         k-NN Classifier.
     """
-    clf = KNeighborsClassifier(n_neighbors=neighbors,
-                               weights='distance',
-                               n_jobs=1)
+    clf = KNeighborsClassifier(n_neighbors=neighbors, weights="distance", n_jobs=1)
 
     return clf
 
 
-def adab_tree(max_depth: int = 10, criterion: str = 'gini', class_weight: Union[Dict, List] = None,
-              n_estimators: int = 100, random_state: int = None) -> AdaBoostClassifier:
+def adab_tree(
+    max_depth: int = 10,
+    criterion: str = "gini",
+    class_weight: Union[Dict, List] = None,
+    n_estimators: int = 100,
+    random_state: int = None,
+) -> AdaBoostClassifier:
     """
     Function  to create and return a ``AdaBoost`` classifier.
 
@@ -192,11 +217,11 @@ def adab_tree(max_depth: int = 10, criterion: str = 'gini', class_weight: Union[
         AdaBoost classifier.
     """
 
-    clf = AdaBoostClassifier(DecisionTreeClassifier(max_depth=max_depth,
-                                                    criterion=criterion,
-                                                    class_weight=class_weight),
-                             n_estimators=n_estimators,
-                             random_state=random_state)
+    clf = AdaBoostClassifier(
+        DecisionTreeClassifier(max_depth=max_depth, criterion=criterion, class_weight=class_weight),
+        n_estimators=n_estimators,
+        random_state=random_state,
+    )
     return clf
 
 

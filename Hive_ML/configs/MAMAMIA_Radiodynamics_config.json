@@ -1,0 +1,52 @@
+{
+    "image_suffix_original": "_image.nii.gz",
+    "image_suffix": [
+      "_ttp_map_cropped.nii.gz",
+      "_cbv_map_cropped.nii.gz",
+      "_cbf_map_cropped.nii.gz",
+      "_mtt_map_cropped.nii.gz"
+    ],
+    "mask_suffix": "_mask_cropped_mask.nii.gz",
+    "perfusion_maps": {
+      "ttp": "_ttp_map_cropped.nii.gz",
+      "cbv": "_cbv_map_cropped.nii.gz",
+      "cbf": "_cbf_map_cropped.nii.gz",
+      "mtt": "_mtt_map_cropped.nii.gz"
+    },
+    "label_dict": {
+    "0": "non-pCR",
+    "1": "pCR"
+  },
+  "models": {
+    "rf": {
+      "criterion": "gini",
+      "n_estimators": 100,
+      "max_depth": 10
+    },
+    "adab": {
+      "criterion": "gini",
+      "n_estimators": 100,
+      "max_depth": 10
+    },
+    "knn": {},
+    "lda": {},
+    "qda": {},
+    "logistic_regression": {},
+    "svm": {
+      "kernel": "rbf"
+    },
+    "naive": {}
+  },
+  "feature_selection": "SFFS",
+  "n_features": 20,
+  "n_folds": 5,
+  "random_seed": 1234567,
+  "feature_aggregator": "Flat",
+  "k_ensemble": [
+    1,
+    5
+  ],
+  "metric_best_model": "roc_auc",
+  "reduction_best_model": "mean"
+  }
+  

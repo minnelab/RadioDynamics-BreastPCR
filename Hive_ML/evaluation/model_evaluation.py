@@ -1,14 +1,28 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from yellowbrick.base import Visualizer
-from yellowbrick.classifier import ClassificationReport, ROCAUC, PrecisionRecallCurve, ClassPredictionError, \
-    DiscriminationThreshold
+from yellowbrick.classifier import (
+    ClassificationReport,
+    ROCAUC,
+    PrecisionRecallCurve,
+    ClassPredictionError,
+    DiscriminationThreshold,
+)
 from yellowbrick.style import set_palette
 
-from Hive_ML.training.models import adab_tree, random_forest, knn, decicion_tree, lda, qda, naive, svm_kernel, \
-    logistic_regression, ridge, mlp
-
-set_palette('sns_pastel')
+from Hive_ML.training.models import (
+    adab_tree,
+    random_forest,
+    knn,
+    decicion_tree,
+    lda,
+    qda,
+    naive,
+    svm_kernel,
+    logistic_regression,
+    ridge,
+    mlp,
+)
 
 from sklearn.decomposition import PCA
 from os import PathLike
@@ -22,6 +36,8 @@ from sklearn.metrics import roc_auc_score
 from Hive_ML.utilities.feature_utils import feature_normalization, prepare_features
 from sklearn.base import ClassifierMixin
 
+set_palette("sns_pastel")
+
 MODELS = {
     "rf": random_forest,
     "adab": adab_tree,
@@ -33,25 +49,23 @@ MODELS = {
     "decision_tree": decicion_tree,
     "svm": svm_kernel,
     "ridge": ridge,
-    "mlp": mlp
+    "mlp": mlp,
 }
 
-AGGR_NUMPY = {
-    "median": np.median,
-    "mean": np.mean
-}
+AGGR_NUMPY = {"median": np.median, "mean": np.mean}
 
 YB_VISUALIZERS = {
     "Report": ClassificationReport,
     "ROCAUC": ROCAUC,
     "PR": PrecisionRecallCurve,
     "CPE": ClassPredictionError,
-    "DT": DiscriminationThreshold
+    "DT": DiscriminationThreshold,
 }
 
 
-def select_best_classifiers(df_summary: DataFrame, metric: str, reduction: str, k: int = 1) -> Tuple[
-    List[Tuple[str, str]], List[float]]:
+def select_best_classifiers(
+    df_summary: DataFrame, metric: str, reduction: str, k: int = 1
+) -> Tuple[List[Tuple[str, str]], List[float]]:
     """
     Given a DataFrame containing Validation scores for different Classifiers and Number of Selected Features,
     returns the k-best combinations and their respective reduced score (mean or median over the validation splits).
@@ -79,9 +93,13 @@ def select_best_classifiers(df_summary: DataFrame, metric: str, reduction: str, 
     n_features = []
     best_val_scores = []
     for classifier in classifiers:
-        aggr = df_summary[(df_summary["Metric"] == metric) & (df_summary["Classifier"] == classifier)][
-            ["Value", "N_Features"]].groupby(["N_Features"]).agg(
-            reduction)
+        aggr = (
+            df_summary[(df_summary["Metric"] == metric) & (df_summary["Classifier"] == classifier)][
+                ["Value", "N_Features"]
+            ]
+            .groupby(["N_Features"])
+            .agg(reduction)
+        )
         aggr = aggr.loc[aggr["Value"].nlargest(1).index]
         n_features.append(aggr.index.values[0])
         best_val_scores.append(aggr.values[0][0])
@@ -94,14 +112,20 @@ def select_best_classifiers(df_summary: DataFrame, metric: str, reduction: str, 
     return n_features_selected_classifier, best_val_scores
 
 
-def evaluate_classifiers(ensemble_configuration_df: DataFrame, classifier_kwargs_list: List[Dict],
-                         train_feature_set: np.ndarray, train_label_set: np.ndarray, test_feature_set: np.ndarray,
-                         test_label_set: np.ndarray,
-                         aggregation: str,
-                         feature_selection: str,
-                         visualizers: List[Dict] = None,
-                         output_file: Union[str, PathLike] = None,
-                         plot_title: str = "", random_state=None) -> Dict:
+def evaluate_classifiers(
+    ensemble_configuration_df: DataFrame,
+    classifier_kwargs_list: List[Dict],
+    train_feature_set: np.ndarray,
+    train_label_set: np.ndarray,
+    test_feature_set: np.ndarray,
+    test_label_set: np.ndarray,
+    aggregation: str,
+    feature_selection: str,
+    visualizers: List[Dict] = None,
+    output_file: Union[str, PathLike] = None,
+    plot_title: str = "",
+    random_state=None,
+) -> Dict:
     """
     Evaluate ensemble Classification performance of provided classifiers, weighting and combining the single classifier predictions.
     If a list of YellowBrick Visualizers is provided, generates a single multi-plot report file.
@@ -136,14 +160,17 @@ def evaluate_classifiers(ensemble_configuration_df: DataFrame, classifier_kwargs
     -------
         Dictionary with the ensemble classifier report ( including the classification metrics ).
     """
-    fig, axs = plt.subplots(int(len(visualizers)), int(ensemble_configuration_df.shape[0]),
-                            figsize=(
-                                int(ensemble_configuration_df.shape[0]) * 10 * 1.5, int(len(visualizers)) * 10 * 1),
-                            squeeze=False)
+    fig, axs = plt.subplots(
+        int(len(visualizers)),
+        int(ensemble_configuration_df.shape[0]),
+        figsize=(int(ensemble_configuration_df.shape[0]) * 10 * 1.5, int(len(visualizers)) * 10 * 1),
+        squeeze=False,
+    )
 
     visualgrid = []
-    x_train, y_train, x_test, y_test = prepare_features(train_feature_set, train_label_set, None, aggregation, None,
-                                                        test_feature_set, test_label_set)
+    x_train, y_train, x_test, y_test = prepare_features(
+        train_feature_set, train_label_set, None, aggregation, None, test_feature_set, test_label_set
+    )
 
     x_train, x_test, _ = feature_normalization(x_train, x_test)
 
@@ -156,31 +183,34 @@ def evaluate_classifiers(ensemble_configuration_df: DataFrame, classifier_kwargs
     ensemble_weights = ensemble_weights / weight_sum
 
     for ensemble_idx, (classifier_configuration, classifier_kwargs, weight) in enumerate(
-            zip(ensemble_configuration_df.iterrows(), classifier_kwargs_list, ensemble_weights)):
-        classifier, n_features = classifier_configuration[1]["Classifier"], classifier_configuration[1][
-            "N_Features"]
+        zip(ensemble_configuration_df.iterrows(), classifier_kwargs_list, ensemble_weights)
+    ):
+        classifier, n_features = classifier_configuration[1]["Classifier"], classifier_configuration[1]["N_Features"]
 
         clf = MODELS[classifier](**classifier_kwargs, random_state=random_state)
 
-        x_train, y_train, x_test, y_test = prepare_features(train_feature_set, train_label_set, None, aggregation, None,
-                                                            test_feature_set, test_label_set)
+        x_train, y_train, x_test, y_test = prepare_features(
+            train_feature_set, train_label_set, None, aggregation, None, test_feature_set, test_label_set
+        )
 
         x_train, x_test, _ = feature_normalization(x_train, x_test)
 
         if n_features != "All" and feature_selection == "SFFS":
-            sffs_model = SFS(clf,
-                             k_features=int(n_features),
-                             forward=True,
-                             floating=True,
-                             scoring='roc_auc',
-                             verbose=0,
-                             n_jobs=-1,
-                             cv=5)
+            sffs_model = SFS(
+                clf,
+                k_features=int(n_features),
+                forward=True,
+                floating=True,
+                scoring="roc_auc",
+                verbose=0,
+                n_jobs=-1,
+                cv=5,
+            )
 
             sffs = sffs_model.fit(x_train, y_train)
             sffs_features = sffs.subsets_
 
-            feature_idx = sffs_features[n_features]['feature_idx']
+            feature_idx = sffs_features[n_features]["feature_idx"]
 
             x_train = x_train[:, feature_idx]
             x_test = x_test[:, feature_idx]
@@ -197,9 +227,7 @@ def evaluate_classifiers(ensemble_configuration_df: DataFrame, classifier_kwargs
         for idx_visualizer, visualizer in enumerate(visualizers):
             visualizers[visualizer]["ax"] = axs[idx_visualizer, ensemble_idx]
             visualizers[visualizer]["title"] = f"{plot_title} {visualizer}, {classifier}-{n_features}"
-            visualgrid.append(YB_Visualizer(clf, visualizer,
-                                            x_train, y_train, x_test, y_test,
-                                            visualizers[visualizer]))
+            visualgrid.append(YB_Visualizer(clf, visualizer, x_train, y_train, x_test, y_test, visualizers[visualizer]))
 
         ensemble_y_test_pred += y_test_pred * weight
 
@@ -213,8 +241,15 @@ def evaluate_classifiers(ensemble_configuration_df: DataFrame, classifier_kwargs
     return report
 
 
-def YB_Visualizer(clf: ClassifierMixin, visualizer: str, x_train: np.ndarray, y_train: np.ndarray, x_test: np.ndarray,
-                  y_test: np.ndarray, kwargs: Dict) -> Visualizer:
+def YB_Visualizer(
+    clf: ClassifierMixin,
+    visualizer: str,
+    x_train: np.ndarray,
+    y_train: np.ndarray,
+    x_test: np.ndarray,
+    y_test: np.ndarray,
+    kwargs: Dict,
+) -> Visualizer:
     """
     Creates and Finalize a YellowBrick visualizer, given the classifier and the train/test features and corresponding labels
     to use for fitting and scoring.
@@ -240,8 +275,7 @@ def YB_Visualizer(clf: ClassifierMixin, visualizer: str, x_train: np.ndarray, y_
     -------
         YellowBrick Visualizer finalized.
     """
-    visualizer = YB_VISUALIZERS[visualizer](clf,
-                                            **kwargs)
+    visualizer = YB_VISUALIZERS[visualizer](clf, **kwargs)
 
     if visualizer != "DT":
         visualizer.fit(x_train, y_train)

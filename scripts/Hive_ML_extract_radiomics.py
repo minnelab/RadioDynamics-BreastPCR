@@ -24,32 +24,28 @@ from Hive_ML.extraction.feature_extraction import extract_features_for_image_and
 
 TIMESTAMP = "{:%Y-%m-%d_%H-%M-%S}".format(datetime.datetime.now())
 
-DESC = dedent(
-    """
+DESC = dedent("""
     Script to extract Radiomics for a specified dataset. The images and masks used to extract the features are specified in the
     ``config-file``.
-    """  # noqa: E501
-)
-EPILOG = dedent(
-    """
+    """)  # noqa: E501
+EPILOG = dedent("""
     Example call:
     ::
         {filename} -i /path/to/data_folder --config-file config_file.json --feature-param-file radiomic_config_file.yaml --output-file features.csv
-    """.format(  # noqa: E501
-        filename=Path(__file__).name
-    )
-)
+    """.format(filename=Path(__file__).name))  # noqa: E501
+
 
 # Create a custom encoder
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
-            return obj.tolist() # Converts 0-d arrays to floats and n-d arrays to lists
+            return obj.tolist()  # Converts 0-d arrays to floats and n-d arrays to lists
         if isinstance(obj, np.integer):
             return int(obj)
         if isinstance(obj, np.floating):
             return float(obj)
         return super(NumpyEncoder, self).default(obj)
+
 
 def get_arg_parser():
     pars = ArgumentParser(description=DESC, epilog=EPILOG, formatter_class=RawTextHelpFormatter)
@@ -104,7 +100,7 @@ def main():
         name=Path(__file__).name,
         level=log_lvl_from_verbosity_args(arguments),
     )
-    
+
     logger.setLevel(INFO)
 
     if Path(arguments["output_file"]).is_file():
@@ -124,16 +120,16 @@ def main():
 
     try:
         extractor = featureextractor.RadiomicsFeatureExtractor(arguments["feature_param_file"])
-    except:
+    except Exception:
         with as_file(files(Hive_ML.configs).joinpath(arguments["feature_param_file"])) as file:
             extractor = featureextractor.RadiomicsFeatureExtractor(str(file))
 
     image_suffix = config_dict["image_suffix"]
     mask_suffix = config_dict["mask_suffix"]
 
-    logger.log(INFO, 'Extraction parameters:\n\t{}'.format(extractor.settings))
-    logger.log(INFO, 'Enabled filters:\n\t{}'.format(extractor.enabledImagetypes))
-    logger.log(INFO, 'Enabled features:\n\t{}'.format(extractor.enabledFeatures))
+    logger.log(INFO, "Extraction parameters:\n\t{}".format(extractor.settings))
+    logger.log(INFO, "Enabled filters:\n\t{}".format(extractor.enabledImagetypes))
+    logger.log(INFO, "Enabled features:\n\t{}".format(extractor.enabledFeatures))
 
     feature_sequence_list = []
     logger.log(INFO, f"Extracting features for {arguments['data_folder']}")
@@ -158,60 +154,75 @@ def main():
                 continue
             distance_map_filename = None
             if "include_depth" in config_dict and config_dict["include_depth"]:
-                distance_map_filename = str(Path(arguments["data_folder"]).joinpath(label, subject, subject +
-                                                                                    config_dict["perfusion_maps"][
-                                                                                        "distance_map"]))
+                distance_map_filename = str(
+                    Path(arguments["data_folder"]).joinpath(
+                        label, subject, subject + config_dict["perfusion_maps"]["distance_map"]
+                    )
+                )
             if type(image_suffix) is list:
                 image_list = [
-                    str(Path(arguments["data_folder"]).joinpath(label, subject, subject + single_image_suffix)) for
-                    single_image_suffix in image_suffix]
+                    str(Path(arguments["data_folder"]).joinpath(label, subject, subject + single_image_suffix))
+                    for single_image_suffix in image_suffix
+                ]
                 if disable_multiprocessing:
-                    single_case_feature_extraction.append(extract_features_for_image_and_mask(extractor, image_list, str(Path(
-                            arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix)), config_dict, distance_map_filename, logger=logger))
+                    single_case_feature_extraction.append(
+                        extract_features_for_image_and_mask(
+                            extractor,
+                            image_list,
+                            str(Path(arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix)),
+                            config_dict,
+                            distance_map_filename,
+                            logger=logger,
+                        )
+                    )
                 else:
-                    single_case_feature_extraction.append(pool.starmap_async(extract_features_for_image_and_mask,
-                                                                             (
-                                                                                 (
-                                                                                     extractor,
-                                                                                     image_list,
-                                                                                     str(Path(
-                                                                                         arguments["data_folder"]).joinpath(
-                                                                                         label, subject,
-                                                                                         subject + mask_suffix)),
-                                                                                     config_dict,
-                                                                                     distance_map_filename,
-                                                                                     None,
-                                                                                     logger
-                                                                                 ),
-                                                                             ),
-                                                                             )
+                    single_case_feature_extraction.append(
+                        pool.starmap_async(
+                            extract_features_for_image_and_mask,
+                            (
+                                (
+                                    extractor,
+                                    image_list,
+                                    str(Path(arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix)),
+                                    config_dict,
+                                    distance_map_filename,
+                                    None,
+                                    logger,
+                                ),
+                            ),
+                        )
                     )
             else:
                 if disable_multiprocessing:
-                    single_case_feature_extraction.append(extract_features_for_image_and_mask(extractor, str(Path(
-                        arguments["data_folder"]).joinpath(label, subject, subject + image_suffix)), str(Path(
-                        arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix)), config_dict, distance_map_filename, logger=logger))
+                    single_case_feature_extraction.append(
+                        extract_features_for_image_and_mask(
+                            extractor,
+                            str(Path(arguments["data_folder"]).joinpath(label, subject, subject + image_suffix)),
+                            str(Path(arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix)),
+                            config_dict,
+                            distance_map_filename,
+                            logger=logger,
+                        )
+                    )
                 else:
-                    single_case_feature_extraction.append(pool.starmap_async(extract_features_for_image_and_mask,
-                                                                         (
-                                                                             (
-                                                                                 extractor,
-                                                                                 str(Path(
-                                                                                     arguments["data_folder"]).joinpath(
-                                                                                     label, subject,
-                                                                                     subject + image_suffix)),
-                                                                                 str(Path(
-                                                                                     arguments["data_folder"]).joinpath(
-                                                                                     label, subject,
-                                                                                     subject + mask_suffix)),
-                                                                                 config_dict,
-                                                                                 distance_map_filename,
-                                                                                 None,
-                                                                                 logger
-                                                                             ),
-                                                                         ),
-                                                                         )
-                                                      )
+                    single_case_feature_extraction.append(
+                        pool.starmap_async(
+                            extract_features_for_image_and_mask,
+                            (
+                                (
+                                    extractor,
+                                    str(
+                                        Path(arguments["data_folder"]).joinpath(label, subject, subject + image_suffix)
+                                    ),
+                                    str(Path(arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix)),
+                                    config_dict,
+                                    distance_map_filename,
+                                    None,
+                                    logger,
+                                ),
+                            ),
+                        )
+                    )
     label_dict = config_dict["label_dict"]
     for res in tqdm(single_case_feature_extraction, desc="Features Extraction"):
         if disable_multiprocessing:

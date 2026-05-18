@@ -18,23 +18,18 @@ import SimpleITK as sitk
 import Hive_ML.configs
 from tqdm import tqdm
 from logging import WARNING
+
 TIMESTAMP = "{:%Y-%m-%d_%H-%M-%S}".format(datetime.datetime.now())
 
-DESC = dedent(
-    """
+DESC = dedent("""
     Script to crop ROI for a specified dataset. The images and masks used to crop the ROI are specified in the
     ``config-file``.
-    """  # noqa: E501
-)
-EPILOG = dedent(
-    """
+    """)  # noqa: E501
+EPILOG = dedent("""
     Example call:
     ::
         {filename} -i /path/to/data_folder --config-file config_file.json
-    """.format(  # noqa: E501
-        filename=Path(__file__).name
-    )
-)
+    """.format(filename=Path(__file__).name))  # noqa: E501
 
 
 def get_arg_parser():
@@ -55,7 +50,6 @@ def get_arg_parser():
         help="Configuration file path, containing training and processing parameters.",
     )
 
-
     add_verbosity_options_to_argparser(pars)
 
     return pars
@@ -71,47 +65,47 @@ def crop_ROI(image_path, mask_path, output_path, output_mask_path, logger):
     # FIX: Cast the mask to an integer type
     # LabelShapeStatisticsImageFilter does not support float32
     mask = sitk.Cast(mask, sitk.sitkUInt8)
-    
+
     logger.info(f"Image size: {image.GetSize()}")
-    
+
     label_shape_filter = sitk.LabelShapeStatisticsImageFilter()
     label_shape_filter.Execute(mask)
-    
+
     roi_label = 1
     if not label_shape_filter.HasLabel(roi_label):
         logger.error("ROI label not found in the mask.")
         return
 
     bbox = label_shape_filter.GetBoundingBox(roi_label)
-    
+
     # Extract the ROI
     # bbox is (start_x, start_y, start_z, size_x, size_y, size_z)
     start_index = bbox[:3]
     size = bbox[3:]
-    
+
     cropped_image = sitk.RegionOfInterest(image, size, start_index)
-    
 
     if output_path:
         sitk.WriteImage(cropped_image, output_path)
-    
+
     cropped_mask = sitk.RegionOfInterest(mask, size, start_index)
     if output_mask_path:
         sitk.WriteImage(cropped_mask, output_mask_path)
-    
+
     logger.info(f"Cropped image size: {cropped_image.GetSize()}")
+
 
 def extract_histogram(image_path, logger):
     try:
-       image = sitk.ReadImage(image_path)
+        image = sitk.ReadImage(image_path)
     except Exception as e:
         logger.error(f"Error reading image: {e}")
         return None
     max_value = float(sitk.GetArrayFromImage(image).max())
     min_value = float(sitk.GetArrayFromImage(image).min())
-    
+
     return min_value, max_value
-    
+
 
 def main():
     parser = get_arg_parser()
@@ -131,8 +125,6 @@ def main():
             with open(json_path) as json_file:
                 config_dict = json.load(json_file)
 
-
-
     image_suffix = config_dict["image_suffix"]
     mask_suffix = config_dict["mask_suffix"]
 
@@ -147,13 +139,19 @@ def main():
                 continue
             if type(image_suffix) is list:
                 image_list = [
-                    str(Path(arguments["data_folder"]).joinpath(label, subject, subject + single_image_suffix)) for
-                    single_image_suffix in image_suffix]
+                    str(Path(arguments["data_folder"]).joinpath(label, subject, subject + single_image_suffix))
+                    for single_image_suffix in image_suffix
+                ]
                 for image in image_list:
                     logger.info(f"Cropping {image}")
-                    output_path = image[:-len(".nii.gz")] +  "_cropped.nii.gz"
+                    output_path = image[: -len(".nii.gz")] + "_cropped.nii.gz"
                     logger.info(f"Output path: {output_path}")
-                    output_mask_path = str(Path(arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix))[:-len(".nii.gz")] +  "_cropped_mask.nii.gz"
+                    output_mask_path = (
+                        str(Path(arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix))[
+                            : -len(".nii.gz")
+                        ]
+                        + "_cropped_mask.nii.gz"
+                    )
                     extracted_histogram = extract_histogram(image, logger)
                     if extracted_histogram is None:
                         subjects_to_skip.append(subject)
@@ -162,16 +160,22 @@ def main():
 
                     if Path(output_path).is_file() and Path(output_mask_path).is_file():
                         continue
-                    crop_ROI(image, str(Path(arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix)), output_path, output_mask_path, logger)
+                    crop_ROI(
+                        image,
+                        str(Path(arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix)),
+                        output_path,
+                        output_mask_path,
+                        logger,
+                    )
                 logger.info(f"Cropped {len(image_list)} images for {label} {subject}")
             else:
                 image_path = str(Path(arguments["data_folder"]).joinpath(label, subject, subject + image_suffix))
                 mask_path = str(Path(arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix))
                 logger.info(f"Cropping {image_path}")
-                output_path = image_path[:-len(".nii.gz")] +  "_cropped.nii.gz"
+                output_path = image_path[: -len(".nii.gz")] + "_cropped.nii.gz"
                 logger.info(f"Output path: {output_path}")
                 logger.info(f"Cropping {mask_path}")
-                output_mask_path = mask_path[:-len(".nii.gz")] +  "_cropped_mask.nii.gz"
+                output_mask_path = mask_path[: -len(".nii.gz")] + "_cropped_mask.nii.gz"
                 extracted_histogram = extract_histogram(image_path, logger)
                 if extracted_histogram is None:
                     subjects_to_skip.append(subject)

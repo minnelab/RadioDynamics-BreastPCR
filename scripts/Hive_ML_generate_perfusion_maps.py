@@ -6,37 +6,25 @@ import os
 import pandas as pd
 import ast
 from Hive.utils.file_utils import subfolders
-from Hive.utils.log_utils import (
-    get_logger,
-    add_verbosity_options_to_argparser,
-    log_lvl_from_verbosity_args,
-    DEBUG
-)
+from Hive.utils.log_utils import get_logger, add_verbosity_options_to_argparser, log_lvl_from_verbosity_args, DEBUG
 from argparse import ArgumentParser, RawTextHelpFormatter
 from multiprocessing import Pool
 from pathlib import Path
 from textwrap import dedent
 from tqdm import tqdm
-from loguru import logger
 
 import Hive_ML.configs
 from Hive_ML.feature_generation.perfusion_features import PERFUSION_FUNCTIONS
 
-DESC = dedent(
-    """
+DESC = dedent("""
     Script to generate Perfusion Maps for a given dataset. The Perfusion Maps to create, and their correpsonding suffix files, are specified in the
     ``config-file``
-    """  # noqa: E501
-)
-EPILOG = dedent(
-    """
+    """)  # noqa: E501
+EPILOG = dedent("""
     Example call:
     ::
         {filename} -i /path/to/data_folder --config-file config_file.json
-    """.format(  # noqa: E501
-        filename=Path(__file__).name
-    )
-)
+    """.format(filename=Path(__file__).name))  # noqa: E501
 
 
 def get_arg_parser():
@@ -110,7 +98,7 @@ def main():
             n_workers = str(os.environ["N_THREADS"])
     else:
         n_workers = str(arguments["n_workers"])
-        
+
     if arguments["clinical_data_file"] is not None:
         df = pd.read_excel(arguments["clinical_data_file"])
     else:
@@ -123,7 +111,7 @@ def main():
         for subject in subjects:
             logger.log(DEBUG, "Processing {}".format(subject))
             for perfusion_map in perfusion_maps_dict:
-                if type(perfusion_maps_dict[perfusion_map]) == dict:
+                if type(perfusion_maps_dict[perfusion_map]) is dict:
                     map_suffix = perfusion_maps_dict[perfusion_map]["suffix"]
                     kwargs = perfusion_maps_dict[perfusion_map]["kwargs"]
                 else:
@@ -134,32 +122,32 @@ def main():
                     if isinstance(timepoints, str):
                         timepoints = ast.literal_eval(timepoints)
                     kwargs = [timepoints]
-                if Path(arguments["data_folder"]).joinpath(label, subject,subject + map_suffix).exists():
+                if Path(arguments["data_folder"]).joinpath(label, subject, subject + map_suffix).exists():
                     continue
                 # Check if timepoints are a list of ints before continuing
                 elif isinstance(kwargs[0], list) and all(isinstance(x, int) for x in kwargs[0]):
                     logger.log(DEBUG, "Creating Perfusion Map {} for {}".format(map_suffix, subject))
-                    perfusion_maps.append(pool.starmap_async(PERFUSION_FUNCTIONS[perfusion_map],
-
-                                                         (
-                                                             (
-                                                                 str(Path(arguments["data_folder"]).joinpath(label,
-                                                                                                             subject,
-                                                                                                             subject +
-                                                                                                             config_dict[
-                                                                                                                 "image_suffix"])),
-                                                                 str(Path(arguments["data_folder"]).joinpath(
-                                                                     label, subject,
-                                                                     subject + config_dict["mask_suffix"])),
-                                                                 str(Path(
-                                                                     arguments["data_folder"]).joinpath(
-                                                                     label, subject,
-                                                                     subject + map_suffix)),
-                                                                 *kwargs,
-                                                                 
-                                                             ),),
-                                                         )
-                                      )
+                    perfusion_maps.append(
+                        pool.starmap_async(
+                            PERFUSION_FUNCTIONS[perfusion_map],
+                            (
+                                (
+                                    str(
+                                        Path(arguments["data_folder"]).joinpath(
+                                            label, subject, subject + config_dict["image_suffix"]
+                                        )
+                                    ),
+                                    str(
+                                        Path(arguments["data_folder"]).joinpath(
+                                            label, subject, subject + config_dict["mask_suffix"]
+                                        )
+                                    ),
+                                    str(Path(arguments["data_folder"]).joinpath(label, subject, subject + map_suffix)),
+                                    *kwargs,
+                                ),
+                            ),
+                        )
+                    )
 
     for res in tqdm(perfusion_maps, desc="Perfusion Maps Creation"):
         _ = res.get()

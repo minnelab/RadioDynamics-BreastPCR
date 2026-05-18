@@ -39,7 +39,8 @@ def get_feature_set_details(feature_set: DataFrame) -> Tuple[List[Any], List[Any
         sequence_feature_list = []
         for subject in subject_ids:
             feature_set_subject = feature_set[
-                (feature_set["Subject_ID"] == subject) & (feature_set["Sequence_Number"] == sequence)]
+                (feature_set["Subject_ID"] == subject) & (feature_set["Sequence_Number"] == sequence)
+            ]
             feature_set_subject = feature_set_subject.copy(deep=True)
             feature_set_subject.drop("Subject_ID", inplace=True, axis=1)
             feature_set_subject.drop("Subject_Label", inplace=True, axis=1)
@@ -60,8 +61,9 @@ def get_feature_set_details(feature_set: DataFrame) -> Tuple[List[Any], List[Any
     return feature_list, subject_ids, subject_labels, feature_names
 
 
-def get_4D_feature_stats(feature_list: List[List[Any]]) -> Tuple[
-    numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+def get_4D_feature_stats(
+    feature_list: List[List[Any]],
+) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     r"""
     Function to accumulate the feature set (with size *[ n_sequences x n_subjects x n_features ]* ) along the sequence dimension.
     Returns 4 Numpy arrays (each with size *[ n_subjects x n_features ]*), including average, sum, standard deviation and mean
@@ -123,7 +125,8 @@ def flatten_4D_features(feature_list: List[List[Any]], feature_names: List[str])
         for n in range(n_features):
             for t in range(T):
                 flat_feature_array = np.hstack(
-                    [flat_feature_array, feature_arrays[t, :, n].reshape(feature_arrays.shape[1], 1)])
+                    [flat_feature_array, feature_arrays[t, :, n].reshape(feature_arrays.shape[1], 1)]
+                )
 
         flatten_feature_names = []
         for feature_name in feature_names:
@@ -135,9 +138,9 @@ def flatten_4D_features(feature_list: List[List[Any]], feature_names: List[str])
         return feature_list, feature_names
 
 
-def data_shuffling(feature_set: numpy.ndarray, label_set: numpy.ndarray, seed_val: int, test_size: float = 0.2, split_file = None) -> \
-Tuple[
-    numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+def data_shuffling(
+    feature_set: numpy.ndarray, label_set: numpy.ndarray, seed_val: int, test_size: float = 0.2, split_file=None
+) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     """
     Function to randomly shuffle the feature set and the corresponding label set along the subject dimension.
     If a split file is provided, the feature set and label set will be split according to the split file.
@@ -159,13 +162,15 @@ Tuple[
         X_train, y_train = shuffle(feature_set, label_set, random_state=seed_val)
         return X_train, y_train, None, None
     X_train, X_test, y_train, y_test = train_test_split(
-        feature_set, label_set, test_size=float(test_size), random_state=seed_val, stratify=label_set)
+        feature_set, label_set, test_size=float(test_size), random_state=seed_val, stratify=label_set
+    )
 
     return X_train, y_train, X_test, y_test
 
 
-def feature_normalization(x_train: numpy.ndarray, x_val: numpy.ndarray = None, x_test: numpy.ndarray = None) -> Tuple[
-    numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+def feature_normalization(
+    x_train: numpy.ndarray, x_val: numpy.ndarray = None, x_test: numpy.ndarray = None
+) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     """
     Normalize each feature in the range 0 to 1
 
@@ -193,11 +198,15 @@ def feature_normalization(x_train: numpy.ndarray, x_val: numpy.ndarray = None, x
     return x_train, x_val, x_test
 
 
-def prepare_features(feature_set: numpy.ndarray, label_set: numpy.ndarray, train_index: List[int], aggregation: str,
-                     val_index: List[int] = None,
-                     val_feature_set: numpy.ndarray = None,
-                     val_label_set: numpy.ndarray = None) -> Tuple[
-    numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+def prepare_features(
+    feature_set: numpy.ndarray,
+    label_set: numpy.ndarray,
+    train_index: List[int],
+    aggregation: str,
+    val_index: List[int] = None,
+    val_feature_set: numpy.ndarray = None,
+    val_label_set: numpy.ndarray = None,
+) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     """
     Function to prepare a feature set into a train/test split, according to the provided indexes. If the
     ``feature_set.shape`` is 3D, performs a channel-wise (axis=1) normalization, optionally followed by a reduction (
