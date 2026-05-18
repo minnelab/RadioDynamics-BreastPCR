@@ -48,7 +48,7 @@ jobs:
           rm hive_ml*.tar.gz
 
           # install from wheel
-          python -m pip install Hive_ML*.whl
+          python -m pip install hive_ml*.whl
           python -c 'import Hive_ML; print(Hive_ML.__version__) ' 2>&1 | grep -iv "unknown"
           python -c 'import Hive_ML; print(Hive_ML.__file__)'
 
