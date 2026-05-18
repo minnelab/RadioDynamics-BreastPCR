@@ -3,6 +3,7 @@ import copy
 import importlib
 import numpy
 import numpy as np
+from loguru import logger
 from pathlib import Path
 from scipy.ndimage.morphology import distance_transform_edt
 from typing import Union
@@ -69,7 +70,7 @@ def generate_distance_map_depth(image_filename: Union[str, Path], mask_filename:
     sitk.WriteImage(distance_map_image, output_filename)
 
 
-def extract_cbf(array: numpy.ndarray, acc: str = "max"):
+def extract_cbf(array: numpy.ndarray, acc: str = "max", timepoints: Union[list, np.ndarray] = None):
     r"""
     Extract 3D CBF map for a given 4D array.
 
@@ -82,21 +83,25 @@ def extract_cbf(array: numpy.ndarray, acc: str = "max"):
         Input Array
     acc :
         Accumulator to use for extracting gradient. Default: "max" (maximum gradient value).
-
+    timepoints :
+        Timepoints array, used to map the CBF values to the timepoints.
     Returns
     -------
         3-D CBF Map
     """
     temporal_axis = np.argmin(array.shape)
 
-    if temporal_axis != 0:
-        array = np.transpose(array, (temporal_axis, 0, 1, 2))
+    if temporal_axis !=0:
+        array = np.transpose(array,(temporal_axis,0,1,2))
     gradient_image = copy.deepcopy(array)
 
     t_size = gradient_image.shape[0]
 
-    for t in range(1, t_size):
-        gradient_image[t, :] = array[t, :] - array[t - 1, :]
+    for t in range(1,t_size):
+        gradient_image[t,:] = array[t,:] - array[t-1,:]
+        if timepoints is not None:
+            gradient_image = gradient_image.astype(float)
+            gradient_image[t,:] = gradient_image[t,:]/ float(timepoints[t] - timepoints[t-1])
     gradient_image[0, :] = 0
 
     m = importlib.import_module("numpy")
@@ -108,7 +113,7 @@ def extract_cbf(array: numpy.ndarray, acc: str = "max"):
 
 
 def generate_cbf_image(image_filename: Union[str, Path], mask_filename: Union[str, Path],
-                       output_filename: Union[str, Path]):
+                       output_filename: Union[str, Path], timepoints: Union[list, np.ndarray] = None):
     r"""
     Generate a 3D CBF map (maximum gradient) from a given 4D Volume, preserving only the values in the mask region.
 
@@ -123,13 +128,15 @@ def generate_cbf_image(image_filename: Union[str, Path], mask_filename: Union[st
         Mask filename, used to filter the voxel CBF values in the mask region.
     output_filename :
         Filename where to save the CBF map.
+    timepoints :
+        Timepoints array, used to map the CBF values to the timepoints.
     """
     image = sitk.ReadImage(image_filename)
     mask = sitk.ReadImage(mask_filename)
     image_array = sitk.GetArrayFromImage(image)
     mask_array = sitk.GetArrayFromImage(mask)
 
-    cbf_map = extract_cbf(image_array)
+    cbf_map = extract_cbf(image_array, timepoints=timepoints)
     cbf_map = cbf_map * mask_array
     cbf_image = sitk.GetImageFromArray(cbf_map)
     cbf_image.CopyInformation(mask)
@@ -225,7 +232,7 @@ def generate_sdcbf_image(image_filename: Union[str, Path], mask_filename: Union[
     sitk.WriteImage(sdcbf_image, output_filename)
 
 
-def extract_mtt(array: numpy.ndarray, acc: str = "max"):
+def extract_mtt(array: numpy.ndarray, acc: str = "max", timepoints: Union[list, np.ndarray] = None):
     r"""
    Extract 3D MTT map for a given 4D array.
 
@@ -238,6 +245,8 @@ def extract_mtt(array: numpy.ndarray, acc: str = "max"):
        Input Array
    acc :
        Accumulator to use for extracting gradient for CBF computation. Default: "max" (maximum gradient value).
+   timepoints :
+       Timepoints array, used to map the MTT values to the timepoints.
 
    Returns
    -------
@@ -252,8 +261,10 @@ def extract_mtt(array: numpy.ndarray, acc: str = "max"):
     t_size = gradient_image.shape[0]
     for t in range(1, t_size):
         gradient_image[t, :] = array[t, :] - array[t - 1, :]
-    gradient_image[0, :] = 0
-
+        if timepoints is not None:
+            gradient_image = gradient_image.astype(float)
+            gradient_image[t, :] = gradient_image[t, :] / float(timepoints[t] - timepoints[t - 1])
+    gradient_image[0, :] = 0   
     m = importlib.import_module("numpy")
     acc_fn = getattr(m, acc)
 
@@ -266,7 +277,7 @@ def extract_mtt(array: numpy.ndarray, acc: str = "max"):
 
 
 def generate_mtt_image(image_filename: Union[str, Path], mask_filename: Union[str, Path],
-                       output_filename: Union[str, Path]):
+                       output_filename: Union[str, Path], timepoints: Union[list, np.ndarray] = None):
     r"""
     Generate a 3D MTT map (Mean Transit Time) from a given 4D Volume, preserving only the values in the mask region.
 
@@ -281,13 +292,15 @@ def generate_mtt_image(image_filename: Union[str, Path], mask_filename: Union[st
         Mask filename, used to filter the voxel MTT values in the mask region.
     output_filename :
         Filename where to save the MTT map.
-        """
+    timepoints :
+        Timepoints array, used to map the MTT values to the timepoints.
+    """
     image = sitk.ReadImage(image_filename)
     mask = sitk.ReadImage(mask_filename)
     image_array = sitk.GetArrayFromImage(image)
     mask_array = sitk.GetArrayFromImage(mask)
 
-    mtt_map = extract_mtt(image_array)
+    mtt_map = extract_mtt(image_array, timepoints=timepoints)
     mtt_map = mtt_map * mask_array
     mtt_image = sitk.GetImageFromArray(mtt_map)
     mtt_image.CopyInformation(mask)
@@ -407,7 +420,7 @@ def extract_cbv(array: numpy.ndarray):
 
 
 def generate_cbv_image(image_filename: Union[str, Path], mask_filename: Union[str, Path],
-                       output_filename: Union[str, Path]):
+                       output_filename: Union[str, Path], timepoints: Union[list, np.ndarray] = None):
     r"""
       Generate a 3D CBV map from a given 4D Volume, preserving only the values in the mask region.
 
@@ -435,7 +448,7 @@ def generate_cbv_image(image_filename: Union[str, Path], mask_filename: Union[st
     sitk.WriteImage(cbv_image, output_filename)
 
 
-def extract_ttp(array: numpy.ndarray):
+def extract_ttp(array: numpy.ndarray, timepoints: Union[list, np.ndarray] = None):
     r"""
        Extract 3D TTP (Time-to-Peak) map for a given 4D array.
 
@@ -446,22 +459,31 @@ def extract_ttp(array: numpy.ndarray):
        ----------
        array :
            Input Array
+       timepoints :
+           Timepoints array, used to map the TTP values to the timepoints.
 
        Returns
        -------
            3-D TTP Map
            """
     temporal_axis = np.argmin(array.shape)
-
-    ttp_array = np.argmax(array, axis=temporal_axis).astype(np.uint8)
+    
+    m = importlib.import_module("numpy")
+    acc_fn = getattr(m, "argmax")
+    
+    ttp_array = acc_fn(array, axis=temporal_axis).astype(np.uint8)
+    if timepoints is not None:
+        ttp_array = np.array(timepoints)[ttp_array]
     ttp_array = ttp_array + 1
-    ttp_array = np.where(ttp_array > array.shape[temporal_axis], array.shape[temporal_axis], ttp_array)
+    
+    if timepoints is None:
+        ttp_array = np.where(ttp_array > array.shape[temporal_axis],  array.shape[temporal_axis], ttp_array)
 
     return ttp_array
 
 
 def generate_ttp_image(image_filename: Union[str, Path], mask_filename: Union[str, Path],
-                       output_filename: Union[str, Path]):
+                       output_filename: Union[str, Path], timepoints: Union[list, np.ndarray] = None):
     r"""
       Generate a 3D TTP map from a given 4D Volume, preserving only the values in the mask region.
 
@@ -476,13 +498,15 @@ def generate_ttp_image(image_filename: Union[str, Path], mask_filename: Union[st
           Mask filename, used to filter the voxel TTP values in the mask region.
       output_filename :
           Filename where to save the TTP map.
+      timepoints :
+          Timepoints array, used to map the TTP values to the timepoints.
       """
     image = sitk.ReadImage(image_filename)
     mask = sitk.ReadImage(mask_filename)
 
     mask_array = sitk.GetArrayFromImage(mask)
 
-    ttp_array = extract_ttp(sitk.GetArrayFromImage(image))
+    ttp_array = extract_ttp(sitk.GetArrayFromImage(image), timepoints=timepoints)
     ttp_array = np.where(mask_array == 0, mask_array, ttp_array)
 
     ttp_image = sitk.GetImageFromArray(ttp_array)

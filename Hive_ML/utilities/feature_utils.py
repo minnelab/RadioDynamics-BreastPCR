@@ -135,12 +135,12 @@ def flatten_4D_features(feature_list: List[List[Any]], feature_names: List[str])
         return feature_list, feature_names
 
 
-def data_shuffling(feature_set: numpy.ndarray, label_set: numpy.ndarray, seed_val: int, test_size: float = 0.2) -> \
+def data_shuffling(feature_set: numpy.ndarray, label_set: numpy.ndarray, seed_val: int, test_size: float = 0.2, split_file = None) -> \
 Tuple[
     numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
     """
     Function to randomly shuffle the feature set and the corresponding label set along the subject dimension.
-
+    If a split file is provided, the feature set and label set will be split according to the split file.
     Parameters
     ----------
     feature_set :

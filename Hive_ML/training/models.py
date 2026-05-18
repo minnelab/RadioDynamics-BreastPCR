@@ -165,7 +165,7 @@ def knn(neighbors=5, random_state: int = None) -> KNeighborsClassifier:
     """
     clf = KNeighborsClassifier(n_neighbors=neighbors,
                                weights='distance',
-                               n_jobs=-1)
+                               n_jobs=1)
 
     return clf
 
