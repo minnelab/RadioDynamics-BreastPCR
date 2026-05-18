@@ -11,6 +11,12 @@
 ![GitHub](https://img.shields.io/github/license/minnelab/RadioDynamics-BreastPCR?logo=github)
 ![PyPI - License](https://img.shields.io/pypi/l/hive-ml?logo=pypi)
 
+![Conda](https://img.shields.io/conda/pn/MAIA-KTH/Hive-ml?logo=anaconda)
+![Conda](https://img.shields.io/conda/v/MAIA-KTH/Hive-ml?logo=anaconda)
+
+![GitHub repo size](https://img.shields.io/github/repo-size/minnelab/RadioDynamics-BreastPCR?logo=github)
+![GitHub release (with filter)](https://img.shields.io/github/v/release/minnelab/RadioDynamics-BreastPCR?logo=github)
+![PyPI](https://img.shields.io/pypi/v/hive-ml?logo=pypi)
 **Hive-ML** is a Python Package collecting the tools and scripts to run Machine Learning experiments on Radiological
 Medical Imaging.
 
