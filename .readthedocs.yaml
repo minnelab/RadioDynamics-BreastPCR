@@ -35,3 +35,4 @@ python:
     install:
     - requirements: docs/pre_install.txt
     - requirements: docs/requirements.txt
+    - requirements: docs/post_install.txt
