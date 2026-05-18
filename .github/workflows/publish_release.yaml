@@ -13,6 +13,10 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
       - name: Install setuptools
         run: |
           python -m pip install --user --upgrade setuptools wheel
@@ -23,30 +27,30 @@ jobs:
           echo "$root_dir"
           set -e
 
-          # Use pre-built binary if available for numpy, force upgrade pip/setuptools/wheel for Python 3.12 compatibility
+          # Use pre-built binary if available for numpy, force upgrade pip/setuptools/wheel for Python 3.11 compatibility
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --only-binary=:all: numpy==1.23.5 || python -m pip install numpy==1.23.5
           python -m pip install -r requirements.txt
-          
+
           # build tar.gz and wheel
           python setup.py sdist bdist_wheel --build-number $(date +'%Y%m%d%H%M')
           tmp_dir=$(mktemp -d)
           cp dist/Hive_ML* "$tmp_dir"
           cd "$tmp_dir"
           ls -al
-          
+
           # install from tar.gz
           python -m pip install Hive_ML*.tar.gz
           python -c 'import Hive_ML; print(Hive_ML.__version__) ' 2>&1 | grep -iv "unknown"
           python -c 'import Hive_ML; print(Hive_ML.__file__)'
           python -m pip uninstall -y Hive_ML
           rm Hive_ML*.tar.gz
-          
+
           # install from wheel
           python -m pip install Hive_ML*.whl
           python -c 'import Hive_ML; print(Hive_ML.__version__) ' 2>&1 | grep -iv "unknown"
           python -c 'import Hive_ML; print(Hive_ML.__file__)'
-          
+
           # clean up
           cd "$root_dir"
           rm -r "$tmp_dir"
@@ -80,7 +84,6 @@ jobs:
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           repository-url: https://test.pypi.org/legacy/
       
-      
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -96,10 +99,10 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
-          python-version: "3.x"
+          python-version: "3.11"
       - name: Install pypa/build
         run: >-
           python3 -m
