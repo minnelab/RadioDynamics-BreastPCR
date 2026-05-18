@@ -30,7 +30,8 @@ jobs:
           # Use pre-built binary if available for numpy, force upgrade pip/setuptools/wheel for Python 3.11 compatibility
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install --only-binary=:all: numpy==1.23.5 || python -m pip install numpy==1.23.5
-          python -m pip install numpy==1.23.5 -r requirements.txt
+          python -m pip install pyradiomics==3.0.1 --no-build-isolation
+          python -m pip install -r requirements.txt
 
           # build tar.gz and wheel
           python setup.py sdist bdist_wheel --build-number $(date +'%Y%m%d%H%M')
