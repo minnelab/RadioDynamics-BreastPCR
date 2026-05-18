@@ -22,7 +22,10 @@ jobs:
           root_dir=$PWD
           echo "$root_dir"
           set -e
-          python -m pip install numpy==1.23.5
+
+          # Use pre-built binary if available for numpy, force upgrade pip/setuptools/wheel for Python 3.12 compatibility
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --only-binary=:all: numpy==1.23.5 || python -m pip install numpy==1.23.5
           python -m pip install -r requirements.txt
           
           # build tar.gz and wheel
@@ -31,7 +34,6 @@ jobs:
           cp dist/Hive_ML* "$tmp_dir"
           cd "$tmp_dir"
           ls -al
-          
           
           # install from tar.gz
           python -m pip install Hive_ML*.tar.gz
