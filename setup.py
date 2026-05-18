@@ -40,7 +40,9 @@ setup(
             "Hive_ML_generate_perfusion_maps = scripts.Hive_ML_generate_perfusion_maps:main",
             "Hive_ML_model_fitting = scripts.Hive_ML_model_fitting:main",
             "Hive_ML_ensemble_models = scripts.Hive_ML_ensemble_models:main",
-
+            "Hive_ML_generate_4D_volumes = scripts.Hive_ML_generate_4D_volumes:main",
+            "Hive_ML_split_by_class = scripts.Hive_ML_split_by_class:main",
+            "Hive_ML_crop_ROI = scripts.Hive_ML_crop_ROI:main"
         ],
     },
     cmdclass=versioneer.get_cmdclass(),
