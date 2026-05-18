@@ -12,6 +12,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import pandas as pd
+import numpy as np
 import radiomics
 from Hive.utils.file_utils import subfolders
 from Hive.utils.log_utils import get_logger, add_verbosity_options_to_argparser, log_lvl_from_verbosity_args, INFO
@@ -39,6 +40,16 @@ EPILOG = dedent(
     )
 )
 
+# Create a custom encoder
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist() # Converts 0-d arrays to floats and n-d arrays to lists
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        return super(NumpyEncoder, self).default(obj)
 
 def get_arg_parser():
     pars = ArgumentParser(description=DESC, epilog=EPILOG, formatter_class=RawTextHelpFormatter)
@@ -93,6 +104,8 @@ def main():
         name=Path(__file__).name,
         level=log_lvl_from_verbosity_args(arguments),
     )
+    
+    logger.setLevel(INFO)
 
     if Path(arguments["output_file"]).is_file():
         output_file = arguments["output_file"]
@@ -100,7 +113,7 @@ def main():
 
         return
 
-    radiomics.logger.setLevel(logging.INFO)
+    radiomics.logger.setLevel(logging.ERROR)
     try:
         with open(arguments["config_file"]) as json_file:
             config_dict = json.load(json_file)
@@ -123,7 +136,9 @@ def main():
     logger.log(INFO, 'Enabled features:\n\t{}'.format(extractor.enabledFeatures))
 
     feature_sequence_list = []
+    logger.log(INFO, f"Extracting features for {arguments['data_folder']}")
     labels = subfolders(arguments["data_folder"], join=False)
+    logger.log(INFO, f"Found {len(labels)} labels")
     n_workers = "1"
     if arguments["n_workers"] is None:
         if "N_THREADS" in os.environ is not None:
@@ -132,10 +147,15 @@ def main():
         n_workers = str(arguments["n_workers"])
     pool = Pool(int(n_workers))
     single_case_feature_extraction = []
-
+    disable_multiprocessing = False
+    subjects_to_exclude = []
+    with open(arguments["data_folder"] + "/subjects_to_skip.json", "r") as f:
+        subjects_to_exclude = json.load(f)
     for label in labels:
         subjects = subfolders(Path(arguments["data_folder"]).joinpath(label), join=False)
         for subject in subjects:
+            if subject in subjects_to_exclude:
+                continue
             distance_map_filename = None
             if "include_depth" in config_dict and config_dict["include_depth"]:
                 distance_map_filename = str(Path(arguments["data_folder"]).joinpath(label, subject, subject +
@@ -145,23 +165,34 @@ def main():
                 image_list = [
                     str(Path(arguments["data_folder"]).joinpath(label, subject, subject + single_image_suffix)) for
                     single_image_suffix in image_suffix]
-                single_case_feature_extraction.append(pool.starmap_async(extract_features_for_image_and_mask,
-                                                                         (
+                if disable_multiprocessing:
+                    single_case_feature_extraction.append(extract_features_for_image_and_mask(extractor, image_list, str(Path(
+                            arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix)), config_dict, distance_map_filename, logger=logger))
+                else:
+                    single_case_feature_extraction.append(pool.starmap_async(extract_features_for_image_and_mask,
                                                                              (
-                                                                                 extractor,
-                                                                                 image_list,
-                                                                                 str(Path(
-                                                                                     arguments["data_folder"]).joinpath(
-                                                                                     label, subject,
-                                                                                     subject + mask_suffix)),
-                                                                                 config_dict,
-                                                                                 distance_map_filename
+                                                                                 (
+                                                                                     extractor,
+                                                                                     image_list,
+                                                                                     str(Path(
+                                                                                         arguments["data_folder"]).joinpath(
+                                                                                         label, subject,
+                                                                                         subject + mask_suffix)),
+                                                                                     config_dict,
+                                                                                     distance_map_filename,
+                                                                                     None,
+                                                                                     logger
+                                                                                 ),
                                                                              ),
-                                                                         ),
-                                                                         )
-                                                      )
+                                                                             )
+                    )
             else:
-                single_case_feature_extraction.append(pool.starmap_async(extract_features_for_image_and_mask,
+                if disable_multiprocessing:
+                    single_case_feature_extraction.append(extract_features_for_image_and_mask(extractor, str(Path(
+                        arguments["data_folder"]).joinpath(label, subject, subject + image_suffix)), str(Path(
+                        arguments["data_folder"]).joinpath(label, subject, subject + mask_suffix)), config_dict, distance_map_filename, logger=logger))
+                else:
+                    single_case_feature_extraction.append(pool.starmap_async(extract_features_for_image_and_mask,
                                                                          (
                                                                              (
                                                                                  extractor,
@@ -174,14 +205,26 @@ def main():
                                                                                      label, subject,
                                                                                      subject + mask_suffix)),
                                                                                  config_dict,
-                                                                                 distance_map_filename
+                                                                                 distance_map_filename,
+                                                                                 None,
+                                                                                 logger
                                                                              ),
                                                                          ),
                                                                          )
                                                       )
-
+    label_dict = config_dict["label_dict"]
     for res in tqdm(single_case_feature_extraction, desc="Features Extraction"):
-        subject_feature_sequence_list = res.get()
+        if disable_multiprocessing:
+            subject_feature_sequence_list = res
+        else:
+            subject_feature_sequence_list = res.get()
+
+        subject_id = subject_feature_sequence_list[0][0]["Subject_ID"]
+        subject_label = subject_feature_sequence_list[0][0]["Subject_Label"]
+        label_id = label_dict[str(subject_label)]
+        subject_path = Path(arguments["data_folder"]).joinpath(label_id, subject_id)
+        with open(subject_path.joinpath(f"{subject_id}_{label_id}_feature_sequence.json"), "w") as f:
+            json.dump(subject_feature_sequence_list, f, cls=NumpyEncoder, indent=4)
         for subject_feature_sequence in subject_feature_sequence_list:
             feature_sequence_list.append(subject_feature_sequence)
 

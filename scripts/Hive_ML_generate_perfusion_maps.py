@@ -3,6 +3,8 @@
 import importlib.resources
 import json
 import os
+import pandas as pd
+import ast
 from Hive.utils.file_utils import subfolders
 from Hive.utils.log_utils import (
     get_logger,
@@ -15,6 +17,7 @@ from multiprocessing import Pool
 from pathlib import Path
 from textwrap import dedent
 from tqdm import tqdm
+from loguru import logger
 
 import Hive_ML.configs
 from Hive_ML.feature_generation.perfusion_features import PERFUSION_FUNCTIONS
@@ -61,6 +64,20 @@ def get_arg_parser():
         default=None,
         help="Number of parallel threads to use when generating the Perfusion Maps (Default: ``N_THREADS``).",
     )
+    pars.add_argument(
+        "--clinical-data-file",
+        type=str,
+        required=False,
+        default=None,
+        help="Clinical data file path, containing the acquisition times for each subject.",
+    )
+    pars.add_argument(
+        "--timepoints-column",
+        type=str,
+        required=False,
+        default="acquisition_times",
+        help="Column name in the clinical data file containing the acquisition times for each subject.",
+    )
     add_verbosity_options_to_argparser(pars)
 
     return pars
@@ -93,6 +110,11 @@ def main():
             n_workers = str(os.environ["N_THREADS"])
     else:
         n_workers = str(arguments["n_workers"])
+        
+    if arguments["clinical_data_file"] is not None:
+        df = pd.read_excel(arguments["clinical_data_file"])
+    else:
+        df = None
 
     pool = Pool(int(n_workers))
     perfusion_maps = []
@@ -107,8 +129,17 @@ def main():
                 else:
                     map_suffix = perfusion_maps_dict[perfusion_map]
                     kwargs = {}
-
-                perfusion_maps.append(pool.starmap_async(PERFUSION_FUNCTIONS[perfusion_map],
+                if df is not None:
+                    timepoints = df[df["patient_id"] == subject][arguments["timepoints_column"]].values[0]
+                    if isinstance(timepoints, str):
+                        timepoints = ast.literal_eval(timepoints)
+                    kwargs = [timepoints]
+                if Path(arguments["data_folder"]).joinpath(label, subject,subject + map_suffix).exists():
+                    continue
+                # Check if timepoints are a list of ints before continuing
+                elif isinstance(kwargs[0], list) and all(isinstance(x, int) for x in kwargs[0]):
+                    logger.log(DEBUG, "Creating Perfusion Map {} for {}".format(map_suffix, subject))
+                    perfusion_maps.append(pool.starmap_async(PERFUSION_FUNCTIONS[perfusion_map],
 
                                                          (
                                                              (
@@ -125,7 +156,7 @@ def main():
                                                                      label, subject,
                                                                      subject + map_suffix)),
                                                                  *kwargs,
-
+                                                                 
                                                              ),),
                                                          )
                                       )

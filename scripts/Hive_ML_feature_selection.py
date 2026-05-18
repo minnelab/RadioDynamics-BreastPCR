@@ -19,12 +19,11 @@ from pathlib import Path
 from sklearn.model_selection import StratifiedKFold
 from textwrap import dedent
 from tqdm import tqdm
-
 import Hive_ML.configs
 from Hive_ML.data_loader.feature_loader import load_feature_set
 from Hive_ML.training.models import adab_tree, random_forest, knn, decicion_tree, lda, qda, naive, svm_kernel, \
     logistic_regression, ridge, mlp
-from Hive_ML.utilities.feature_utils import data_shuffling, feature_normalization, prepare_features
+from Hive_ML.utilities.feature_utils import data_shuffling, feature_normalization
 
 TIMESTAMP = "{:%Y-%m-%d_%H-%M-%S}".format(datetime.datetime.now())
 
@@ -85,6 +84,13 @@ def get_arg_parser():
         required=True,
         help="Experiment name used to save the SFFS summary.",
     )
+    
+    pars.add_argument(
+        "--split-file",
+        type=str,
+        required=False,
+        help="Split file used to split the data into train and test sets.",
+    )
 
     add_verbosity_options_to_argparser(pars)
 
@@ -130,7 +136,9 @@ def main():
         arguments["feature_file"],
         get_4D_stats=stats_4D,
         flatten_features=flatten_features)
-
+    
+    split_file = arguments["split_file"] if arguments["split_file"] else None
+    
     if aggregation == "Flat":
         features = feature_set
     elif aggregation == "Mean":
@@ -151,9 +159,10 @@ def main():
 
         feature_set_3D = np.array(features).squeeze(-2)
 
-        train_feature_set, train_label_set, test_feature_set, test_label_set = data_shuffling(
-            np.swapaxes(feature_set_3D, 0, 1), label_set, config_dict["random_seed"],
-            test_size=config_dict["test_size"])
+        if not Path(split_file).is_file():
+            train_feature_set, train_label_set, test_feature_set, test_label_set = data_shuffling(
+                np.swapaxes(feature_set_3D, 0, 1), label_set, config_dict["random_seed"],
+                test_size=config_dict["test_size"])
 
     else:
 
@@ -182,11 +191,35 @@ def main():
         print("# Features: {}".format(feature_set.shape[1]))
         print("# Labels: {}".format(label_set.shape))
 
-        train_feature_set, train_label_set, test_feature_set, test_label_set = data_shuffling(feature_set, label_set,
-                                                                                              config_dict[
-                                                                                                  "random_seed"],
-                                                                                              test_size=config_dict[
-                                                                                                  "test_size"])
+        if not Path(split_file).is_file():
+            train_feature_set, train_label_set, test_feature_set, test_label_set = data_shuffling(feature_set, label_set,
+                                                                                                config_dict[
+                                                                                                    "random_seed"],
+                                                                                                test_size=config_dict[
+                                                                                                    "test_size"])
+    if Path(split_file).is_file():
+        logger.info(f"Using split file: {split_file}")
+        split_data = pd.read_csv(split_file)
+        train_ids = split_data["train_split"].tolist()
+        test_ids = split_data["test_split"].tolist()
+    
+        train_feature_set = []
+        test_feature_set = []
+        train_label_set = []
+        test_label_set = []
+        
+        for feature, label, subject_id in zip(feature_set, subject_labels, subject_ids):
+            if subject_id in train_ids:
+                train_feature_set.append(feature)
+                train_label_set.append(label)
+            elif subject_id in test_ids:
+                test_feature_set.append(feature)
+                test_label_set.append(label)
+
+    train_feature_set = np.array(train_feature_set)
+    test_feature_set = np.array(test_feature_set)
+    train_label_set = np.array(train_label_set)
+    test_label_set = np.array(test_label_set)
 
     experiment_name = arguments["experiment_name"]
 
@@ -213,6 +246,8 @@ def main():
             selected_features[classifier] = {}
             kf = StratifiedKFold(n_splits=config_dict["n_folds"], random_state=config_dict["random_seed"], shuffle=True)
             for fold, (train_index, _) in enumerate(kf.split(train_feature_set, train_label_set)):
+                if fold != 0:
+                    continue
                 pbar.set_description(f"{classifier}, fold {fold} FS")
                 fs_summary = Path(experiment_dir).joinpath(f"FS_summary_{classifier}_fold_{fold}.json")
                 if fs_summary.is_file():
@@ -220,12 +255,17 @@ def main():
                         selected_features[classifier][fold] = json.load(f)
 
                 else:
-                    x_train, y_train, _, _ = prepare_features(train_feature_set, train_label_set, train_index,
-                                                              aggregation)
+                    x_train = train_feature_set
+                    y_train = train_label_set
+                    #x_train, y_train, _, _ = prepare_features(train_feature_set, train_label_set, train_index,
+                    #                                          aggregation)
 
                     n_features = config_dict["n_features"]
                     if n_features > x_train.shape[1]:
                         n_features = x_train.shape[1]
+                        
+                    if classifier == "knn":
+                        n_features = 10
 
                     x_train, _, _ = feature_normalization(x_train)
 
@@ -235,7 +275,7 @@ def main():
                                      forward=True,
                                      floating=True,
                                      scoring='roc_auc',
-                                     verbose=0,
+                                     verbose=2,
                                      n_jobs=-1,
                                      cv=5)
                     df_features_x = []
