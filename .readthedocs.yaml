@@ -29,4 +29,6 @@ sphinx:
 # See https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html
 python:
     install:
+    - pip:
+      - numpy==1.23.5
     - requirements: docs/requirements.txt
