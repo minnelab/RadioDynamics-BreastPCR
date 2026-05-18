@@ -1,1 +1,1 @@
-Hive-ML==2.0rc0
+Hive-ML==2.0
