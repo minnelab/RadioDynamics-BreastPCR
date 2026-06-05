@@ -1,0 +1,15 @@
+{
+    "job_name": "extract-radiomics",
+    "wall_time": "23:00:00",
+    "nodes": 1,
+    "alvis":{
+        "cpus_per_task": 64,
+        "tasks_per_node": 1,
+        "gpus_per_node:NO": "T4:1",
+        "no_gpu": true,
+        "env_variables": {
+    }
+    },
+    "start_command": "ml Python/3.11.3-GCCcore-12.3.0 && ml virtualenv/20.23.1-GCCcore-12.3.0 && source $DATA_FOLDER/envs/bin/activate",
+    "command": "\npython Hive_ML_extract_radiomics.py --data-folder $DATA_FOLDER/Data/MAMA-MIA/Classes --config-file MAMAMIA_Radiodynamics_config.json --feature-param-file radiomic_params.yaml --output-file $DATA_FOLDER/Data/MAMA-MIA/Radiodynamics_features.xlsx --n-workers 64"
+}

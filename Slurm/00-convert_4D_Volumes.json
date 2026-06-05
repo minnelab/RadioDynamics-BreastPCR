@@ -1,0 +1,13 @@
+{
+    "job_name": "convert-4D-volumes",
+    "wall_time": "23:00:00",
+    "nodes": 1,
+    "alvis":{
+        "cpus_per_task": 4,
+        "no_gpu": true,
+        "env_variables": {
+    }
+    },
+    "start_command": "ml Python/3.11.3-GCCcore-12.3.0 && ml virtualenv/20.23.1-GCCcore-12.3.0 && source $DATA_FOLDER/envs/bin/activate",
+    "command": "\npython Hive_ML_generate_4D_volumes.py --root-dir $DATA_FOLDER/Data/MAMA-MIA"
+}

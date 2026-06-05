@@ -1,0 +1,16 @@
+{
+    "job_name": "feature-selection",
+    "wall_time": "23:00:00",
+    "nodes": 1,
+    "alvis":{
+        "cpus_per_task": 32,
+        "tasks_per_node": 1,
+        "gpus_per_node:NO": "T4:1",
+        "no_gpu": true,
+        "env_variables": {
+            "ROOT_FOLDER": "$DATA_FOLDER/Experiments/MAMAMIA-Radiodynamics"
+        }
+    },
+    "start_command": "ml Python/3.11.3-GCCcore-12.3.0 && ml virtualenv/20.23.1-GCCcore-12.3.0 && source $DATA_FOLDER/envs/bin/activate",
+    "command": "\npython Hive_ML_feature_selection.py --feature-file $DATA_FOLDER/Data/MAMA-MIA/Radiodynamics_features.xlsx --config-file MAMAMIA_Radiodynamics_config.json --experiment-name MAMAMIA_Radiodynamics-TrainTestSplit-1Fold"
+}
