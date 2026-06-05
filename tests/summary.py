@@ -13,7 +13,6 @@ df_summary = pd.read_excel(Path(ROOT_FOLDER).joinpath(experiment_name, f"{experi
 
 aggr = df_summary[df_summary["Metric"] == metric][["Value", "Classifier"]].groupby(["Classifier"]).agg(reduction)
 
-print(aggr)
 aggr = aggr.loc[aggr["Value"].nlargest(k).index]
 classifiers = aggr.index.values
 
